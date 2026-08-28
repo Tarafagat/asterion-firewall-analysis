@@ -54,6 +54,9 @@ Dos motivos, uno técnico y uno de diseño:
 | GET | `/api/v1/analysis` | Corre un análisis fresco, no lo persiste (resource, solo lectura) |
 | POST | `/api/v1/analysis` | Corre un análisis y lo guarda en el historial (action) |
 | GET | `/api/v1/history?limit=N` | Últimos N análisis guardados (default 20) |
+| GET/POST | `/api/v1/rule-sets` | Listar / crear conjuntos de reglas de firewall propios |
+| GET/PUT/DELETE | `/api/v1/rule-sets/{id}` | Leer / editar / borrar un conjunto de reglas |
+| POST | `/api/v1/rule-sets/{id}/lab-test` | Prueba el conjunto de reglas **de verdad** en un Asterion Lab efímero (ver abajo) |
 
 Formato de un `Report`:
 
@@ -77,16 +80,49 @@ Formato de un `Report`:
 }
 ```
 
+## Reglas de firewall, probadas de verdad en un Lab
+
+Además de analizar el firewall real de esta máquina, el plugin deja
+**declarar** reglas propias (mismo vocabulario que
+`asterion-lab/spec.FirewallRule`: `action` allow/deny, `port`, `proto`
+tcp/udp) y probarlas contra algo real antes de confiar en ellas —
+`POST /api/v1/rule-sets/{id}/lab-test` genera un `lab.yaml` efímero (el
+mismo patrón de dos VMs documentado en `asterion-core/README.md`: un
+`server` Ubuntu con las reglas aplicadas por `ufw` real, un `client`
+Alpine que las prueba con `nc` real) y ejecuta, vía el binario `asterion`
+ya instalado, `lab create` → `lab start` → `lab test` → `lab destroy` —
+siempre destruye al final, nunca deja una VM huérfana corriendo.
+
+**Detalle no obvio, encontrado probando en vivo**: antes de cada prueba de
+conectividad, se arranca un listener real (`python3 -m http.server
+<puerto>`) en el puerto del server — sin esto, `allow` y `deny` dan el
+mismo resultado (timeout) contra un puerto sin nada escuchando, y la
+prueba no distinguiría "bloqueado por ufw" de "no hay nada ahí". Con el
+listener real, un `allow` reachable prueba que ufw efectivamente dejó
+pasar tráfico a un servicio real, y un `deny` bloqueado prueba que ufw lo
+frenó pese a que sí había algo escuchando — no un falso positivo.
+
+Es lento de verdad (boot real de VM + instalación de ufw por SSH, del
+orden de 30-90s) — el endpoint no finge progreso, tarda lo que tarda un
+laboratorio real (timeout de 5 minutos en el lado del plugin).
+
 ## Frontend propio
 
 `frontend/` es una app React + Vite + pnpm independiente que consume esta
-misma API. El binario Go **también sirve su propio build** (`frontend/dist/`,
-vía `frontend_dist` en la config — default `./frontend/dist`) en `/`, igual
-que `backend-core` sirve `frontend-core`. Esto no es decorativo: el reverse
-proxy de `backend-core` (`GET /api/plugins/{name}/proxy/{path}`) ya reenvía
-cualquier método/contenido tal cual al puerto del plugin — así que, una vez
-que este plugin tenga su `plugin.yaml` (fase siguiente), su dashboard propio
-va a quedar embebible en el dashboard local sin código nuevo de proxy.
+misma API: sparkline de puntaje en el tiempo y barras de severidad por
+hallazgo (SVG a mano, sin librería de gráficos), más una sección de
+Reglas de firewall (tabla de rule-sets, modal de alta/edición, botón
+"Probar en un Lab" con su estado de espera). El binario Go **también
+sirve su propio build** (`frontend/dist/`, vía `frontend_dist` en la
+config — default `./frontend/dist`) en `/`, igual que `backend-core`
+sirve `frontend-core`. Esto no es decorativo: el reverse proxy de
+`backend-core` (`GET /api/plugins/{name}/proxy/{path}`) ya reenvía
+cualquier método/contenido tal cual al puerto del plugin — **el dashboard
+propio de este plugin ya está embebido de verdad** en el dashboard local
+de Asterion (tab Plugins → este plugin → "Abrir panel"), sin código nuevo
+de proxy: el único cambio necesario fue que `frontend/src/lib/api.ts` use
+rutas relativas (sin barra inicial) para que el mismo build funcione
+standalone y embebido.
 
 ### Desarrollo
 
@@ -142,3 +178,12 @@ severidad/recomendación, puntaje 65/100 — consistente con lo que
 sirviendo su propio frontend build probado con `curl` (HTML en `/`, JS con
 `content-type: text/javascript` en `/assets/...`, API intacta en
 `/api/v1/*`).
+
+**Lab test, contra QEMU real en esta máquina**: rule-set con una regla
+`allow 8080/tcp` y una `deny 9090/tcp`, corrido de punta a punta vía
+`POST /api/v1/rule-sets/{id}/lab-test`. Resultado real: `8080` alcanzable
+desde la VM cliente (`nc` devolvió `open`), `9090` bloqueado (`nc`
+timeout) **pese a tener un servidor real escuchando ahí** — confirmando
+que es `ufw` bloqueando de verdad, no simplemente "no hay nada". Duración
+real ~40s. `asterion lab list` después de la corrida: ninguna VM
+huérfana.
