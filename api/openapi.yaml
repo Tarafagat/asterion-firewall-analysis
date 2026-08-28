@@ -1,0 +1,40 @@
+openapi: 3.0.3
+info:
+  title: asterion-firewall-analysis
+  description: Análisis del firewall real de la máquina, con severidad y recomendación.
+  version: "0.1.0"
+paths:
+  /analysis:
+    get:
+      operationId: get_latest_analysis
+      summary: Corre un análisis fresco sin persistirlo
+    post:
+      operationId: run_analysis
+      summary: Corre un análisis y lo guarda en el historial
+  /history:
+    get:
+      operationId: list_history
+      summary: Últimos análisis guardados
+  /rule-sets:
+    get:
+      operationId: list_rule_sets
+      summary: Lista los conjuntos de reglas de firewall guardados
+    post:
+      operationId: create_rule_set
+      summary: Crea un conjunto de reglas nuevo
+  /rule-sets/{id}:
+    get:
+      operationId: get_rule_set
+      summary: Lee un conjunto de reglas
+    put:
+      operationId: update_rule_set
+      summary: Edita un conjunto de reglas
+    delete:
+      operationId: delete_rule_set
+      summary: Borra un conjunto de reglas
+  /rule-sets/{id}/lab-test:
+    post:
+      operationId: lab_test_rule_set
+      summary: >-
+        Prueba el conjunto de reglas de verdad en un Asterion Lab efímero
+        (VMs QEMU reales, ufw real, tráfico de red real)

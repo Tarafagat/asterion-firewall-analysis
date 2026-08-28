@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RuleSet",
+  "type": "object",
+  "properties": {
+    "id": { "type": "string", "readOnly": true },
+    "name": { "type": "string" },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action": { "type": "string", "enum": ["allow", "deny"] },
+          "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+          "proto": { "type": "string", "enum": ["tcp", "udp"], "default": "tcp" },
+          "description": { "type": "string" }
+        },
+        "required": ["action", "port"]
+      }
+    },
+    "created_at": { "type": "string", "format": "date-time", "readOnly": true },
+    "updated_at": { "type": "string", "format": "date-time", "readOnly": true }
+  },
+  "required": ["name", "rules"]
+}

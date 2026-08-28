@@ -1,0 +1,5 @@
+/data/
+/asterion-firewall-analysis
+frontend/dist/
+frontend/node_modules/
+frontend/node_modules/.tmp/

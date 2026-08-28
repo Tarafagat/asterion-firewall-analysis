@@ -1,0 +1,56 @@
+language "0.1"
+
+# Fuente editable del plugin.yaml de este repo — compilar con:
+#   asterion plugin from-ast plugin.ast --out . --force
+# plugin.yaml es el artefacto generado; este archivo es lo que se edita.
+
+Contract.define(
+    name="asterion-firewall-analysis",
+    version="0.1.0",
+    description="Analiza el firewall real de la máquina y devuelve hallazgos con severidad y recomendación.",
+    author="Asterion",
+    license="Apache-2.0",
+)
+
+Contract.language(name="go", version="1.25")
+
+Contract.start(command="./asterion-firewall-analysis", port=0)
+Contract.health_path(path="/health")
+
+Contract.api(base_path="/api/v1", openapi="api/openapi.yaml")
+
+Contract.permissions(
+    network=[],
+    filesystem=["./data"],
+    secrets=false,
+)
+
+# "analysis" salió de 'asterion plugin from-openapi' como resource con
+# crud=[list, create] porque GET/POST sobre una ruta de un segmento se
+# infiere siempre como colección — pero POST /analysis no "crea" nada con
+# un body del cliente, es una acción imperativa (correr un análisis nuevo
+# y persistirlo). Acá se declara directo, sin ese rodeo: el GET es el
+# resource (de solo lectura), el POST es su propia action.
+Contract.resource(
+    name="analysis",
+    endpoint="/analysis",
+    primary_key="analyzed_at",
+    crud=["list"],
+)
+Contract.resource(
+    name="history",
+    endpoint="/history",
+    primary_key="analyzed_at",
+    crud=["list"],
+)
+
+Contract.resource(
+    name="rule-sets",
+    endpoint="/rule-sets",
+    schema="resources/schemas/rule_set.json",
+    primary_key="id",
+    crud=["create", "read", "update", "delete", "list"],
+)
+
+Contract.action(name="run_analysis", method="POST", endpoint="/analysis", description="Corre un análisis fresco y lo guarda en el historial")
+Contract.action(name="lab_test_rule_set", method="POST", endpoint="/rule-sets/{id}/lab-test", description="Prueba un conjunto de reglas de verdad en un Asterion Lab efímero (VMs QEMU reales) y devuelve el resultado")
