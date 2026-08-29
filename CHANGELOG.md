@@ -25,3 +25,10 @@ Este proyecto todavía no tiene releases etiquetados en git.
   proxy de plugins de `asterion-core`.
 - `plugin.yaml` generado desde `plugin.ast` (Asterion Language,
   `Contract.*`) — fuente editable versionada junto al código.
+
+### Changed
+- **Confirmado en vivo contra una máquina Linux real** (hasta ahora solo
+  se había probado en macOS): detección y lectura de `ufw`, hallazgos con
+  severidad/recomendación consistentes con `asterion local doctor` en esa
+  misma máquina. README actualizado — la sección "Estado real" ya no
+  dice "código escrito, sin probar en Linux".

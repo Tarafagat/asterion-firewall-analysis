@@ -37,9 +37,12 @@ Dos motivos, uno técnico y uno de diseño:
 ## Estado real (honesto)
 
 - **macOS: real y probado en esta máquina** — Application Firewall y pf.
-- **Linux (ufw/nftables/iptables): código escrito, sin probar en una
-  máquina Linux real todavía** — mismo criterio honesto que el resto del
-  ecosistema Asterion (ver READMEs de asterion-core/asterion-lab).
+- **Linux (ufw/nftables/iptables): real y probado en una máquina Linux
+  real** — mismo criterio honesto que el resto del ecosistema Asterion
+  (ver READMEs de asterion-core/asterion-lab): detectó `ufw` presente,
+  leyó su estado real, generó hallazgos con severidad/recomendación
+  consistentes con lo que reporta `asterion local doctor` en esa misma
+  máquina.
 - El análisis de reglas específicas (`analyzeUFW`/`analyzeRuleText`) es
   una heurística sobre texto, no un parser completo de sintaxis
   ufw/nft/iptables — cubre el caso común (puerto sensible + ALLOW +
@@ -178,6 +181,12 @@ severidad/recomendación, puntaje 65/100 — consistente con lo que
 sirviendo su propio frontend build probado con `curl` (HTML en `/`, JS con
 `content-type: text/javascript` en `/assets/...`, API intacta en
 `/api/v1/*`).
+
+**También corrido de verdad contra una máquina Linux real** (`ufw`):
+mismo flujo — `GET /api/v1/analysis` detectó `ufw` presente y su estado
+real, `POST /api/v1/analysis` + `GET /api/v1/history` end-to-end, mismo
+binario sirviendo su propio frontend build — con resultado consistente
+con `asterion local doctor` en esa misma máquina, igual que en macOS.
 
 **Lab test, contra QEMU real en esta máquina**: rule-set con una regla
 `allow 8080/tcp` y una `deny 9090/tcp`, corrido de punta a punta vía
